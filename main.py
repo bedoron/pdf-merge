@@ -1,5 +1,5 @@
 import argparse
-from os import listdir
+from os import listdir, path
 from os.path import isfile, join
 
 from PyPDF2 import PdfMerger, PdfReader, PdfWriter
@@ -30,11 +30,13 @@ def do_args():
 
 def main():
     args = do_args()
-    path = args.path
+    source_path = args.path
     result_file = args.out
     password = args.password
     create_decoded = args.decode
-    pdfs = [f for f in listdir(path) if isfile(join(path, f)) and '.pdf' in f]
+    pdfs = [f for f in listdir(source_path) if isfile(path.join(source_path, f)) and '.pdf' in f]
+    pdfs.sort()
+    pdfs = pdfs[::-1]
 
     # path_dir = Path.cwd()
     # pdfs = sorted([str(f.expanduser().absolute()) for f in path_dir.glob(sys.argv[2])])
@@ -42,16 +44,16 @@ def main():
     print("Pages: ", pages)
     print(f"merging to {result_file} the following files: {pdfs}")
     merger = PdfMerger()
-    for i, pdf in enumerate(pdfs):
+    for i, pdf in enumerate(pdfs): # Reverse order of lexicographical sort
         print(f"appending {pdfs[i]}")
-        with open(path + '\\' + pdf, 'rb') as input_file:
+        with open(path.join(source_path, pdf), 'rb') as input_file:
             reader = PdfReader(input_file)
 
             if password:
                 reader.decrypt(password)
 
             if create_decoded:
-                with open(path + '\\' + 'DECODED_' + pdf, 'wb') as output_file:
+                with open(path.join(source_path ,'DECODED_' + pdf, 'wb')) as output_file:
                     writer = PdfWriter()
                     for z in range(len(reader.pages)):
                         writer.add_page(reader.pages[z])
@@ -64,21 +66,21 @@ def main():
                 print("trying another method...")
                 # Try to truncate data after %%EOF
                 # opens the file for reading
-                with open(path + '\\' + pdf, 'rb') as p:
+                with open(path.join(source_path , pdf), 'rb') as p:
                     txt = (p.readlines())
 
                 # get the new list terminating correctly
                 txtx = reset_eof_of_pdf_return_stream(txt)
 
                 # write to new pdf
-                with open(path + '\\' + pdf, 'wb') as f:
+                with open(path.join(source_path , pdf), 'wb') as f:
                     f.writelines(txtx)
                 try:
-                    merger.append(path + '\\' + pdf, pages=(pages - 1, pages) if pages else None)
+                    merger.append(path.join(source_path , pdf), pages=(pages - 1, pages) if pages else None)
                 except Exception as e:
                     print(f"failed handling {pdfs[i]}: {e}")
 
-    merger.write(path + '\\' + result_file)
+    merger.write(path.join(source_path, result_file))
     merger.close()
 
 
